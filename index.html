@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BUG 大作战 · 1024 程序员限时灭虫挑战</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --border: #30363d;
+    --green: #3fb950;
+    --cyan: #58a6ff;
+    --gold: #e3b341;
+    --red: #f85149;
+    --text: #c9d1d9;
+    --dim: #8b949e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "SF Mono", "JetBrains Mono", Consolas, "Courier New", monospace;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* ===== 滚动代码背景 ===== */
+  #codeBg {
+    position: fixed; inset: 0;
+    overflow: hidden;
+    z-index: 0;
+    opacity: .35;
+  }
+  #codeBg .col {
+    position: absolute;
+    top: 0;
+    white-space: pre;
+    font-size: 13px;
+    line-height: 1.9;
+    color: #1f6feb33;
+    animation: scrollUp linear infinite;
+  }
+  @keyframes scrollUp {
+    from { transform: translateY(100vh); }
+    to   { transform: translateY(-100%); }
+  }
+  /* CRT 扫描线 */
+  body::after {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent 0 2px, rgba(0,0,0,.12) 2px 4px);
+    z-index: 50;
+  }
+
+  #app {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 12px;
+  }
+
+  /* ===== 通用面板 ===== */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .glow-title {
+    text-shadow: 0 0 18px rgba(63,185,80,.55), 0 0 40px rgba(88,166,255,.3);
+  }
+
+  /* ===== 开始界面 ===== */
+  #startScreen {
+    margin: auto;
+    width: 100%;
+    padding: 34px 26px 28px;
+    text-align: center;
+  }
+  #startScreen h1 {
+    font-size: clamp(34px, 8vw, 52px);
+    color: var(--green);
+    letter-spacing: 2px;
+  }
+  #startScreen .sub {
+    margin-top: 10px;
+    color: var(--dim);
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+  .legend {
+    margin: 26px auto 0;
+    text-align: left;
+    display: inline-block;
+    font-size: 14px;
+    line-height: 2.1;
+  }
+  .legend b { font-size: 17px; margin-right: 6px; }
+  .c-green { color: var(--green); } .c-gold { color: var(--gold); }
+  .c-cyan { color: var(--cyan); }  .c-red { color: var(--red); }
+  #nameInput {
+    margin-top: 22px;
+    width: 220px;
+    padding: 10px 12px;
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 15px;
+    text-align: center;
+    outline: none;
+  }
+  #nameInput:focus { border-color: var(--green); }
+  .btn {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 13px 44px;
+    font-size: 18px;
+    font-family: inherit;
+    letter-spacing: 3px;
+    color: #04150a;
+    background: var(--green);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 24px rgba(63,185,80,.45);
+    transition: transform .08s, box-shadow .2s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 0 34px rgba(63,185,80,.65); }
+  .btn:active { transform: translateY(1px); }
+  .target-hint {
+    margin-top: 18px;
+    color: var(--dim);
+    font-size: 13px;
+  }
+  .target-hint b { color: var(--cyan); }
+
+  /* ===== 游戏界面 ===== */
+  #gameScreen { display: none; flex-direction: column; height: 100%; gap: 10px; }
+  #hud {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+  }
+  #score {
+    font-size: 26px;
+    font-weight: bold;
+    color: var(--green);
+    min-width: 110px;
+  }
+  #timerWrap { flex: 1; height: 10px; background: #21262d; border-radius: 5px; overflow: hidden; }
+  #timerBar {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--cyan), var(--green));
+    border-radius: 5px;
+    transition: width .2s linear;
+  }
+  #comboTag {
+    min-width: 74px;
+    text-align: right;
+    color: var(--gold);
+    font-weight: bold;
+    font-size: 15px;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  #goalBar {
+    height: 6px;
+    background: #21262d;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #goalFill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--gold), var(--green));
+    transition: width .25s;
+  }
+  #arena {
+    position: relative;
+    flex: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 50% 30%, rgba(31,111,235,.08), transparent 60%),
+      #0a0d12;
+    cursor: crosshair;
+  }
+  #arena.shake { animation: shake .3s; }
+  @keyframes shake {
+    0%,100% { transform: translate(0,0); }
+    25% { transform: translate(-8px,3px); }
+    50% { transform: translate(7px,-4px); }
+    75% { transform: translate(-5px,-2px); }
+  }
+  #arena.flashRed { box-shadow: inset 0 0 80px rgba(248,81,73,.5); }
+
+  /* bug 元素 */
+  .bug {
+    position: absolute;
+    width: 62px; height: 62px;
+    margin: -31px 0 0 -31px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    cursor: pointer;
+    animation: bugIn .18s ease-out, bugWiggle .5s ease-in-out .2s infinite alternate;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,.6));
+    z-index: 5;
+  }
+  @keyframes bugIn {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+  }
+  @keyframes bugWiggle {
+    from { rotate: -8deg; }
+    to   { rotate: 8deg; }
+  }
+  .bug.fast { animation-duration: .15s, .28s; font-size: 34px; }
+  .bug.gold {
+    font-size: 44px;
+    filter: drop-shadow(0 0 12px rgba(227,179,65,.9));
+  }
+  .bug.bomb {
+    cursor: default;
+    outline: 3px solid var(--red);
+    outline-offset: 3px;
+    border-radius: 50%;
+    animation: bugIn .18s ease-out, bombPulse .7s ease-in-out infinite alternate;
+  }
+  @keyframes bombPulse {
+    from { outline-color: rgba(248,81,73,.35); }
+    to   { outline-color: rgba(248,81,73,1); }
+  }
+  .bug.dead { animation: splat .3s ease-out forwards; pointer-events: none; }
+  @keyframes splat {
+    to { transform: scale(1.9); opacity: 0; }
+  }
+
+  .float-text {
+    position: absolute;
+    font-size: 20px;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 6;
+    animation: floatUp .8s ease-out forwards;
+    white-space: nowrap;
+  }
+  @keyframes floatUp {
+    to { transform: translateY(-52px); opacity: 0; }
+  }
+  .dot {
+    position: absolute;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 6;
+  }
+  #muteBtn {
+    position: absolute;
+    top: 8px; right: 8px;
+    z-index: 10;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    border-radius: 6px;
+    padding: 4px 9px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  /* ===== 结算界面 ===== */
+  #endScreen {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: rgba(13,17,23,.94);
+    overflow-y: auto;
+    padding: 26px 16px;
+    text-align: center;
+  }
+  #endScreen h2 {
+    font-size: 30px;
+    margin-bottom: 4px;
+  }
+  #endTitle { color: var(--gold); }
+  #endSub { color: var(--dim); font-size: 14px; margin-bottom: 18px; }
+  #cardWrap { display: flex; justify-content: center; }
+  #cardCanvas {
+    max-width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.6);
+  }
+  .end-btns { margin-top: 18px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn2 {
+    padding: 11px 26px;
+    font-size: 15px;
+    font-family: inherit;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: #21262d;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .btn2.primary { background: var(--green); color: #04150a; border: none; font-weight: bold; }
+
+  /* 通关撒花画布 */
+  #confetti {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 30;
+  }
+
+  @media (max-width: 480px) {
+    .bug { width: 74px; height: 74px; margin: -37px 0 0 -37px; font-size: 48px; }
+    #score { font-size: 20px; min-width: 84px; }
+  }
+</style>
+</head>
+<body>
+<div id="codeBg"></div>
+<canvas id="confetti"></canvas>
+
+<div id="app">
+  <!-- ====== 开始 ====== -->
+  <div id="startScreen" class="panel">
+    <h1 class="glow-title">BUG 大作战</h1>
+    <div class="sub">&gt;&gt;&gt; 1024 程序员限时灭虫挑战 &lt;&lt;&lt;</div>
+    <div class="legend">
+      <div><b>🐛</b><span class="c-green">普通 Bug</span> +12 分</div>
+      <div><b>🕷️</b><span class="c-cyan">飞快 Bug</span> +25 分（手速！）</div>
+      <div><b>🐞</b><span class="c-gold">金色彩蛋</span> +60 分</div>
+      <div><b>💣</b><span class="c-red">死锁炸弹</span> 别点！−30 分</div>
+    </div>
+    <div class="target-hint">30 秒内拿到 <b>1024 分</b> 即通关，连击有加成</div>
+    <input id="nameInput" maxlength="12" placeholder="输入你的 Builder 昵称">
+    <br>
+    <button class="btn" id="startBtn">开始挑战</button>
+  </div>
+
+  <!-- ====== 游戏 ====== -->
+  <div id="gameScreen">
+    <div id="hud" class="panel">
+      <div id="score">0 / 1024</div>
+      <div id="timerWrap"><div id="timerBar"></div></div>
+      <div id="comboTag"></div>
+    </div>
+    <div id="goalBar"><div id="goalFill"></div></div>
+    <div id="arena">
+      <button id="muteBtn" title="音效开关">🔊</button>
+    </div>
+  </div>
+
+  <!-- ====== 结算 ====== -->
+  <div id="endScreen">
+    <h2 id="endTitle"></h2>
+    <div id="endSub"></div>
+    <div id="cardWrap"><canvas id="cardCanvas" width="760" height="1000"></canvas></div>
+    <div class="end-btns">
+      <button class="btn2 primary" id="downloadBtn">下载战绩卡</button>
+      <button class="btn2" id="againBtn">再来一局</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= 配置 ================= */
+const GOAL = 1024, DURATION = 30;
+const TYPES = {
+  normal: { emoji:'🐛', pts: 12, life:[1700,2600], color:'#3fb950' },
+  fast:   { emoji:'🕷️', pts: 25, life:[1100,1600], color:'#58a6ff' },
+  gold:   { emoji:'🐞', pts: 60, life:[1300,1800], color:'#e3b341' },
+  bomb:   { emoji:'💣', pts:-30, life:[2000,2800], color:'#f85149' }
+};
+const SPAWN = { normal:.58, fast:.24, gold:.10, bomb:.08 };
+
+const $ = id => document.getElementById(id);
+const rand = (a,b) => a + Math.random()*(b-a);
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+/* ================= 背景代码雨 ================= */
+(function initCodeBg(){
+  const snippets = [
+    'if (bug) { squash(); }',
+    'while (!fixed) { coffee++; }',
+    'git commit -m "fix: 1024"',
+    'try { deploy(); } catch (e) {}',
+    'console.log("hello 1024");',
+    'function build() { return dream; }',
+    'const builder = "real AI engineer";',
+    'for (let i = 0; i < 1024; i++)',
+    'npm run build --production',
+    'await bug.squash().catch(retry)',
+    '// TODO: 上线前删掉这行',
+    'if (works) { doNotTouch(); }',
+    'export const power = 1024;',
+    'bug.squash().then(happy)',
+    'sudo rm -rf ./bug/',
+  ];
+  const bg = $('codeBg');
+  const W = innerWidth;
+  for (let c = 0; c < Math.ceil(W/260); c++) {
+    const col = document.createElement('div');
+    col.className = 'col';
+    col.style.left = (c*260 + rand(-40,40)) + 'px';
+    let text = '';
+    for (let i = 0; i < 60; i++) text += pick(snippets) + '
+';
+    col.textContent = text;
+    col.style.animationDuration = rand(30,60)+'s';
+    col.style.animationDelay = '-'+rand(0,50)+'s';
+    bg.appendChild(col);
+  }
+})();
+
+/* ================= 音效 ================= */
+let audioCtx = null, muted = false;
+function beep(freq, dur=.08, type='square', vol=.12) {
+  if (muted) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch(e){}
+}
+$('muteBtn').onclick = e => {
+  e.stopPropagation();
+  muted = !muted;
+  $('muteBtn').textContent = muted ? '🔇' : '🔊';
+};
+
+/* ================= 游戏状态 ================= */
+let state = null;
+function startGame() {
+  $('startScreen').style.display = 'none';
+  $('endScreen').style.display = 'none';
+  $('gameScreen').style.display = 'flex';
+  state = {
+    score: 0, kills: 0, combo: 0, maxCombo: 0,
+    t0: Date.now(), ended: false, spawnTimer: null
+  };
+  $('arena').querySelectorAll('.bug,.float-text,.dot').forEach(n => n.remove());
+  updateHUD();
+  scheduleSpawn(900);
+  beep(660,.1); setTimeout(()=>beep(880,.12),110);
+}
+
+function scheduleSpawn(ms) {
+  state.spawnTimer = setTimeout(() => {
+    if (state.ended) return;
+    spawnBug();
+    const elapsed = (Date.now()-state.t0)/1000;
+    scheduleSpawn(rand(950, 550) * (1 - elapsed/DURATION*.5)); // 越刷越快
+  }, ms);
+}
+
+function spawnBug() {
+  const r = Math.random();
+  let type = r < SPAWN.normal ? 'normal' : r < SPAWN.normal+SPAWN.fast ? 'fast'
+           : r < SPAWN.normal+SPAWN.fast+SPAWN.gold ? 'gold' : 'bomb';
+  const conf = TYPES[type];
+  const el = document.createElement('div');
+  el.className = 'bug ' + (type==='fast'?'fast':type);
+  el.textContent = conf.emoji;
+  el.dataset.type = type;
+  const arena = $('arena');
+  const w = arena.clientWidth, h = arena.clientHeight;
+  el.style.left = rand(60, w-60) + 'px';
+  el.style.top  = rand(80, h-70) + 'px';
+  const life = rand(conf.life[0], conf.life[1]);
+  el.dataset.born = Date.now();
+  el.dataset.life = life;
+  el.dataset.expire = setTimeout(() => el.remove(), life);
+  arena.appendChild(el);
+}
+
+function floatText(x, y, str, color) {
+  const el = document.createElement('div');
+  el.className = 'float-text';
+  el.textContent = str;
+  el.style.cssText = `left:${x}px;top:${y}px;color:${color};`;
+  $('arena').appendChild(el);
+  setTimeout(()=>el.remove(), 800);
+}
+function splatDots(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.style.background = color;
+    const a = rand(0, Math.PI*2), dist = rand(20,55);
+    d.style.cssText = `left:${x}px;top:${y}px;transition:all .45s ease-out;`;
+    $('arena').appendChild(d);
+    requestAnimationFrame(()=>{ requestAnimationFrame(()=>{
+      d.style.transform = `translate(${Math.cos(a)*dist}px,${Math.sin(a)*dist}px) scale(.2)`;
+      d.style.opacity = '0';
+    });});
+    setTimeout(()=>d.remove(), 500);
+  }
+}
+
+$('arena').addEventListener('pointerdown', e => {
+  if (!state || state.ended) return;
+  const bugEl = e.target.closest('.bug');
+  const rect = $('arena').getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+
+  if (!bugEl) { state.combo = 0; updateHUD(); return; } // 点空重置连击
+
+  const type = bugEl.dataset.type, conf = TYPES[type];
+
+  if (type === 'bomb') {
+    addScore(conf.pts);
+    state.combo = 0;
+    floatText(x, y, '-30 死锁!', '#f85149');
+    $('arena').classList.add('shake','flashRed');
+    setTimeout(()=>$('arena').classList.remove('shake','flashRed'), 320);
+    beep(120,.25,'sawtooth',.2);
+  } else {
+    state.kills++;
+    state.combo++;
+    state.maxCombo = Math.max(state.maxCombo, state.combo);
+    const bonus = Math.min((state.combo-1)*2, 20);
+    const pts = conf.pts + bonus;
+    addScore(pts);
+    const label = bonus>0 ? `+${pts} x${state.combo}` : `+${pts}`;
+    floatText(x, y, label, conf.color);
+    splatDots(x, y, conf.color);
+    beep(type==='gold'?1046:type==='fast'?880:660, .07);
+    if (state.combo>0 && state.combo%5===0) {
+      floatText(x, y-40, `连击 x${state.combo}!`, '#e3b341');
+      beep(1318,.12,'triangle',.15);
+    }
+  }
+  clearTimeout(Number(bugEl.dataset.expire));
+  bugEl.classList.add('dead');
+  bugEl.addEventListener('animationend', ()=>bugEl.remove(), {once:true});
+  updateHUD();
+});
+
+function addScore(pts) {
+  state.score = Math.max(0, state.score + pts);
+  if (state.score >= GOAL && !state.ended) {
+    state.bonusSeconds = Math.max(0, Math.round(DURATION - (Date.now()-state.t0)/1000));
+    endGame(true);
+  }
+}
+
+function updateHUD() {
+  $('score').textContent = `${state.score} / ${GOAL}`;
+  $('goalFill').style.width = Math.min(100, state.score/GOAL*100) + '%';
+  const left = Math.max(0, DURATION - (Date.now()-state.t0)/1000);
+  $('timerBar').style.width = (left/DURATION*100) + '%';
+  const tag = $('comboTag');
+  if (state.combo >= 2) { tag.textContent = `COMBO ${state.combo}`; tag.style.opacity = 1; }
+  else tag.style.opacity = 0;
+}
+setInterval(() => { // 计时刷新
+  if (state && !state.ended && $('gameScreen').style.display === 'flex') {
+    const left = DURATION - (Date.now()-state.t0)/1000;
+    $('timerBar').style.width = Math.max(0, left/DURATION*100) + '%';
+    if (left <= 0) endGame(false);
+  }
+}, 200);
+
+/* ================= 结算 & 战绩卡 ================= */
+function rankOf(score, won) {
+  if (won) return '1024 高光灭虫手';
+  if (score >= 600) return '资深灭虫架构师';
+  if (score >= 300) return '高级找茬工程师';
+  return '实习 Debug 专员';
+}
+
+function endGame(won) {
+  if (state.ended) return;
+  state.ended = true;
+  clearTimeout(state.spawnTimer);
+  const s = state;
+  const secs = won ? s.bonusSeconds : 0;
+
+  $('endTitle').textContent = won ? '🎉 1024 达成通关！' : '时间到！';
+  $('endSub').textContent = won
+    ? `提前 ${secs} 秒通关，Bug 见你绕道走`
+    : `差 ${GOAL - s.score} 分，再来一把肯定行`;
+  $('gameScreen').style.display = 'none';
+  $('endScreen').style.display = 'block';
+
+  if (won) { confetti(); [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.15,'triangle',.15), i*120)); }
+  else beep(220,.4,'sawtooth',.1);
+
+  drawCard(won, secs);
+}
+
+function drawCard(won, secs) {
+  const c = $('cardCanvas'), ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const name = ($('nameInput').value.trim() || '匿名 Builder').slice(0,12);
+
+  // 背景
+  const grad = ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0,'#0d1117'); grad.addColorStop(1,'#101a24');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+  // 边框
+  ctx.strokeStyle = state.score>=GOAL ? '#e3b341' : '#3fb950';
+  ctx.lineWidth = 3; ctx.strokeRect(18,18,W-36,H-36);
+  ctx.strokeStyle = '#30363d'; ctx.lineWidth = 1; ctx.strokeRect(28,28,W-56,H-56);
+  // 角落代码装饰
+  ctx.fillStyle = '#1f6feb44'; ctx.font = '13px monospace';
+  ['while(!fixed){coffee++;}','git commit -m "1024"','bug.squash();'].forEach((t,i)=>ctx.fillText(t, 44, 70+i*20));
+
+  ctx.textAlign = 'center';
+  // 标题
+  ctx.fillStyle = '#3fb950';
+  ctx.font = 'bold 52px monospace';
+  ctx.shadowColor = 'rgba(63,185,80,.6)'; ctx.shadowBlur = 22;
+  ctx.fillText('BUG 大作战', W/2, 150);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#8b949e'; ctx.font = '18px monospace';
+  ctx.fillText('1024 程序员限时灭虫挑战 · TRAE Builder 作品秀', W/2, 186);
+  // 徽章
+  ctx.fillStyle = '#e3b341'; ctx.font = 'bold 30px monospace';
+  ctx.fillText('· 1 0 2 4 ·', W/2, 238);
+
+  // 昵称
+  ctx.fillStyle = '#c9d1d9'; ctx.font = 'bold 40px monospace';
+  ctx.fillText(name, W/2, 330);
+
+  // 数据
+  const rows = [
+    ['最终得分', state.score],
+    ['击杀 Bug', state.kills + ' 只'],
+    ['最高连击', 'x' + state.maxCombo],
+    ['称号', rankOf(state.score, won)],
+  ];
+  if (won) rows.splice(3, 0, ['提前通关', secs + ' 秒']);
+  rows.forEach((r, i) => {
+    const y = 420 + i*92;
+    ctx.fillStyle = '#21262d';
+    ctx.fillRect(120, y-44, W-240, 66);
+    ctx.strokeStyle = '#30363d'; ctx.strokeRect(120, y-44, W-240, 66);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#8b949e'; ctx.font = '20px monospace';
+    ctx.fillText(r[0], 150, y);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = i===3 ? '#e3b341' : '#3fb950';
+    ctx.font = 'bold 26px monospace';
+    ctx.fillText(String(r[1]), W-150, y);
+  });
+
+  // 底部
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#8b949e'; ctx.font = '16px monospace';
+  ctx.fillText('To the Real AI Engineer', W/2, H-80);
+  ctx.fillStyle = '#30363d'; ctx.font = '14px monospace';
+  ctx.fillText(new Date().toLocaleDateString('zh-CN') + ' · 1024', W/2, H-50);
+}
+
+/* ================= 撒花 ================= */
+function confetti() {
+  const cv = $('confetti'), ctx = cv.getContext('2d');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const colors = ['#3fb950','#58a6ff','#e3b341','#f85149','#c9d1d9'];
+  const parts = Array.from({length: 140}, () => ({
+    x: rand(0, cv.width), y: rand(-cv.height, 0),
+    w: rand(6,12), h: rand(8,16),
+    vy: rand(2,5), vx: rand(-1.5,1.5),
+    rot: rand(0,Math.PI*2), vr: rand(-.1,.1),
+    c: pick(colors)
+  }));
+  const t0 = Date.now();
+  (function tick(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    parts.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.c; ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+    });
+    if (Date.now()-t0 < 3500) requestAnimationFrame(tick);
+    else ctx.clearRect(0,0,cv.width,cv.height);
+  })();
+}
+
+/* ================= 按钮 ================= */
+$('startBtn').onclick = () => {
+  if (!audioCtx) beep(440,.01); // 解锁音频
+  startGame();
+};
+$('againBtn').onclick = () => {
+  $('endScreen').style.display = 'none';
+  startGame();
+};
+$('downloadBtn').onclick = () => {
+  const a = document.createElement('a');
+  a.download = '1024-bug-battle-战绩卡.png';
+  a.href = $('cardCanvas').toDataURL('image/png');
+  a.click();
+};
+// 记住昵称
+try {
+  $('nameInput').value = localStorage.getItem('bugBattleName') || '';
+  $('nameInput').onchange = () => localStorage.setItem('bugBattleName', $('nameInput').value.trim());
+} catch(e){}
+</script>
+</body>
+</html>
