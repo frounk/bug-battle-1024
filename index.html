@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BUG 大作战 · 1024 程序员限时灭虫挑战</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--border:#30363d;--green:#3fb950;--cyan:#58a6ff;--gold:#e3b341;--red:#f85149;--text:#c9d1d9;--dim:#8b949e}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:"SF Mono","JetBrains Mono",Consolas,"Courier New",monospace;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none}
+#codeBg{position:fixed inset:0;overflow:hidden;z-index:0;opacity:.35}
+#codeBg .col{position:absolute;top:0;white-space:pre;font-size:13px;line-height:1.9;color:#1f6feb33;animation:scrollUp linear infinite}
+@keyframes scrollUp{from{transform:translateY(100vh)}to{transform:translateY(-100%)}}
+body::after{content:"";position:fixed inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.12) 2px 4px);z-index:50}
+#app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto;padding:12px}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px}
+#startScreen{margin:auto;width:100%;padding:34px 26px 28px;text-align:center}
+#startScreen h1{font-size:clamp(34px,8vw,52px);color:var(--green);letter-spacing:2px}
+.btn{display:inline-block;margin-top:20px;padding:13px 44px;font-size:18px;font-family:inherit;letter-spacing:3px;color:#04150a;background:var(--green);border:none;border-radius:8px;cursor:pointer}
+#gameScreen{display:none;flex-direction:column;height:100%;gap:10px}
+#hud{display:flex;align-items:center;gap:12px;padding:10px 14px}
+#score{font-size:26px;font-weight:bold;color:var(--green);min-width:110px}
+#timerWrap{flex:1;height:10px;background:#21262d;border-radius:5px;overflow:hidden}
+#timerBar{height:100%;width:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:5px;transition:width .2s linear}
+#arena{position:relative;flex:1;border-radius:10px;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,rgba(31,111,235,.08),transparent 60%),#0a0d12;cursor:crosshair}
+.bug{position:absolute;font-size:28px;cursor:pointer;user-select:none;pointer-events:auto}
+#endScreen{display:none;flex-direction:column;align-items:center;padding:40px 20px;text-align:center}
+#endScreen h1{font-size:clamp(28px,6vw,42px);color:var(--gold);margin-bottom:10px}
+#endScreen .final-score{font-size:clamp(32px,7vw,56px);color:var(--green);font-weight:bold;margin:20px 0}
+</style>
+</head>
+<body>
+<div id="codeBg"></div>
+<div id="app">
+  <div id="startScreen" class="panel"><h1>BUG 大作战</h1><div class="sub">1024 程序员限时灭虫挑战</div><input type="text" id="nameInput" placeholder="输入你的名字" maxlength="20"><button id="startBtn" class="btn">开始游戏</button></div>
+  <div id="gameScreen" class="panel"><div id="hud"><div id="score">0 / 1024</div><div id="timerWrap"><div id="timerBar"></div></div></div><div id="arena"></div></div>
+  <div id="endScreen" class="panel"><h1 id="endTitle">时间到!</h1><div class="final-score" id="finalScore">0</div><button id="againBtn" class="btn">再来一局</button></div>
+</div>
+<script>
+const GOAL=1024,DURATION=30;
+const TYPES={normal:{emoji:'🐛',pts:12,life:[1700,2600],color:'#3fb950'},fast:{emoji:'🕷️',pts:25,life:[1100,1600],color:'#58a6ff'},gold:{emoji:'🐞',pts:60,life:[1300,1800],color:'#e3b341'},bomb:{emoji:'💣',pts:-30,life:[2000,2800],color:'#f85149'}};
+const SPAWN={normal:.58,fast:.24,gold:.10,bomb:.08};
+const helper$=function(id){return document.getElementById(id)};
+const rand=function(a,b){return a+Math.random()*(b-a)};
+const pick=function(arr){return arr[Math.floor(Math.random()*arr.length)]};
+(function initCodeBg(){const snippets=['if (bug) { squash(); }','while (!fixed) { coffee++; }','git commit -m "fix: 1024"','try { deploy(); } catch (e) {}','console.log("hello 1024");','function build() { return dream; }','const builder = "real AI engineer";','for (let i = 0; i < 1024; i++)','npm run build --production','await bug.squash().catch(retry)','// TODO: 上线前删掉这行','if (works) { doNotTouch(); }','export const power = 1024;','bug.squash().then(happy)','sudo rm -rf ./bug/'];const bg=helper$('codeBg'),W=innerWidth;for (let c=0;c<Math.ceil(W/260);c++){const col=document.createElement('div');col.className='col';col.style.left=(c*260+rand(-40,40))+'px';let text='';for (let i=0;i<60;i++)text+=pick(snippets)+String.fromCharCode(10);col.textContent=text;col.style.animationDuration=rand(30,60)+'s';col.style.animationDelay='-'+rand(0,50)+'s';bg.appendChild(col);}})();
+let audioCtx=null,muted=false;
+function beep(freq,dur,durDef,type,vol,volDef){if(muted)return;try{if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type||'square';o.frequency.value=freq;g.gain.setValueAtTime(vol||.12,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+(dur||.08));o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+(dur||.08));}catch(e){}}
+document.getElementById('muteBtn')&&document.getElementById('muteBtn').addEventListener('click',function(e){e.stopPropagation();muted=!muted;document.getElementById('muteBtn').textContent=muted?'🔇':'🔊';});
+let state=null;
+function startGame(){helper$('startScreen').style.display='none';helper$('endScreen').style.display='none';helper$('gameScreen').style.display='flex';state={score:0,kills:0,combo:0,maxCombo:0,t0:Date.now(),ended:false,spawnTimer:null};helper$('arena').querySelectorAll('.bug,.float-text,.dot').forEach(function(n){n.remove();});updateHUD();scheduleSpawn(900);beep(660,.1);setTimeout(function(){beep(880,.12);},110);}
+function scheduleSpawn(ms){state.spawnTimer=setTimeout(function(){if(state.ended)return;spawnBug();const elapsed=(Date.now()-state.t0)/1000;scheduleSpawn(rand(950,550)*(1-elapsed/DURATION*.5));},ms);}
+function spawnBug(){const r=Math.random();let type=r<SPAWN.normal?'normal':r<SPAWN.normal+SPAWN.fast?'fast':r<SPAWN.normal+SPAWN.fast+SPAWN.gold?'gold':'bomb';const conf=TYPES[type];const el=document.createElement('div');el.className='bug '+type;el.textContent=conf.emoji;el.dataset.type=type;const arena=helper$('arena');const w=arena.clientWidth,h=arena.clientHeight;el.style.left=rand(60,w-60)+'px';el.style.top=rand(80,h-70)+'px';const life=rand(conf.life[0],conf.life[1]);el.dataset.born=Date.now();el.dataset.life=life;el.dataset.expire=setTimeout(function(){el.remove();},life);arena.appendChild(el);}
+helper$('arena').addEventListener('pointerdown',function(e){if(!state||state.ended)return;const bugEl=e.target.closest('.bug');if(!bugEl){state.combo=0;updateHUD();return;}const type=bugEl.dataset.type,conf=TYPES[type];if(type==='bomb'){addScore(conf.pts);state.combo=0;}else{state.kills++;state.combo++;state.maxCombo=Math.max(state.maxCombo,state.combo);const bonus=Math.min((state.combo-1)*2,20);const pts=conf.pts+bonus;addScore(pts);}clearTimeout(Number(bugEl.dataset.expire));bugEl.classList.add('dead');bugEl.addEventListener('animationend',function(){bugEl.remove();},{once:true});updateHUD();});
+function addScore(pts){state.score=Math.max(0,state.score+pts);if(state.score>=GOAL&&!state.ended){state.bonusSeconds=Math.max(0,Math.round(DURATION-(Date.now()-state.t0)/1000));endGame(true);}}
+function updateHUD(){helper$('score').textContent=state.score+'/'+GOAL;const left=Math.max(0,DURATION-(Date.now()-state.t0)/1000);helper$('timerBar').style.width=(left/DURATION*100)+'%';}
+setInterval(function(){if(state&&!state.ended&&helper$('gameScreen').style.display==='flex'){const left=DURATION-(Date.now()-state.t0)/1000;helper$('timerBar').style.width=Math.max(0,left/DURATION*100)+'%';if(left<=0)endGame(false);}},200);
+function endGame(win){state.ended=true;clearTimeout(state.spawnTimer);helper$('gameScreen').style.display='none';helper$('endScreen').style.display='flex';helper$('endTitle').textContent=win?'挑战成功!':'时间到!';helper$('finalScore').textContent=state.score;}
+helper$('startBtn').addEventListener('click',function(){if(!audioCtx)beep(440,.01);startGame();});
+helper$('againBtn').addEventListener('click',function(){helper$('endScreen').style.display='none';startGame();});
+try{helper$('nameInput').value=localStorage.getItem('bugBattleName')||'';}catch(e){}
+</script>
+</body>
+</html>
